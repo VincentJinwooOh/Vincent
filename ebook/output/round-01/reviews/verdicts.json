@@ -1,0 +1,29 @@
+{
+  "round": 1,
+  "collected_at": "2026-09-06",
+  "documents": {
+    "dossier.md": {
+      "author_model": "openai/gpt-5.6-luna",
+      "verdicts": {
+        "skeptic":            {"model": "x-ai/grok-4.6",          "score": 3, "pass": false, "blocking": ["명제를 조건부로 격하", "Lazear 선택효과 오용 수정", "반대문헌·far transfer 실패를 본문에 포함"]},
+        "fact_checker":       {"model": "google/gemini-3.8-flash", "score": 5, "pass": false, "blocking": ["B8 Gentner 2003 게재지 오기", "D2 Teodoridis 서지 미완성"]},
+        "learning_scientist": {"model": "x-ai/grok-4.6",          "score": 4, "pass": false, "blocking": ["제너럴리스트=원전이 우위 오독", "interleaving의 학제 확장", "B6를 2022 메타로 교체"], "note": "solar-pro4 빈 응답, deepseek-v4-flash 시간초과 후 3차 시도"},
+        "psychologist":       {"model": "google/gemini-2.5-flash", "score": 6, "pass": false, "blocking": ["Hidi & Renninger 누락", "개방성 누락", "마인드셋/그릿 논쟁 누락", "정체성 혼미·선택 과부하 누락", "웰빙 직접 증거 부족"], "note": "glm-5.3 시간초과 후 교체"}
+      },
+      "all_pass": false
+    },
+    "stories.md": {
+      "author_model": "google/gemini-3.8-flash",
+      "verdicts": {
+        "fact_checker":    {"model": "openai/gpt-5.6-luna",           "score": 5, "pass": false, "blocking": ["'센쿼트' 인명 오기", "마과회통 유배 집필설(허위)", "Phillips·Elbert 출처", "'체바프 아키볼라지' 허위 인물", "머스크 수치 미검증"], "note": "deepseek-v4-pro 시간초과 후 교체"},
+        "reader_advocate": {"model": "google/gemini-2.5-flash-lite",  "score": 7, "pass": false, "blocking": ["설명 없는 용어", "적용 방법론 부족", "반대 사례의 얕음"], "note": "검토자는 pass:true 로 적었으나 임계값 8 미달로 파이프라인 규칙에 따라 불합격 처리"}
+      },
+      "all_pass": false
+    }
+  },
+  "operational_notes": [
+    "claude.ai 커넥터 경유 MCP 호출은 약 60초 상한이 있어 max_tokens 2,500 안팎으로 분할 호출해야 한다. 로컬 pipeline.py 는 이 제약이 없다.",
+    "추론 모델(solar-pro4, deepseek-v4-pro/flash, glm-5.3)은 짧은 답에도 수천 토큰의 내부 추론을 써서 상한에 걸리기 쉽다. 커넥터 경유 시에는 gpt-5.6-luna, gemini-*-flash, grok-4.6 이 안정적이었다.",
+    "저자 모델과 검토 모델은 항상 다른 회사로 배정했다."
+  ]
+}

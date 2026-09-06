@@ -34,3 +34,7 @@ OAuth 승인 시 7일 만료, 10달러 한도의 전용 API 키가 자동 발급
 - Claude Code 클라우드 세션에서 쓰려면 해당 환경의 네트워크 정책이
   `openrouter.ai` 와 `mcp.openrouter.ai` 로의 아웃바운드 접속을 허용해야 합니다.
 - 서버 목록과 사용법: https://openrouter.ai/docs/guides/overview/mcp-server
+
+## 전자책 다중 봇 검토 시스템
+
+`ebook/` 에 "제너럴리스트" 주제 전자책을 위한 역할별 봇(연구원, 이야기 수집가, 반증가, 사실검증가, 학습과학자, 심리학자, 독자 대변인, 편집장)과 자동 검토 루프가 있다. 서로 다른 회사의 모델을 OpenRouter 로 호출한다. 사용법과 라운드 1 결과는 `ebook/README.md` 참조.
