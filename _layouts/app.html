@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>ClassRing — 우리 반 소통 플랫폼</title>
+  <meta name="description" content="교사·학생·학부모가 함께 쓰는 학급 소통 플랫폼. 알림장, 과제, 출석, 설문, 앨범, 쪽지, AI 보조교사까지.">
+  <meta name="theme-color" content="#10b981">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='24' fill='%2310b981'/><text x='50' y='68' font-size='56' text-anchor='middle'>🎒</text></svg>">
+  <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+  <link rel="stylesheet" href="assets/css/app.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="#/"><span class="brand-mark">🎒</span>ClassRing<small>우리 반</small></a>
+      <form class="search" data-form="search" role="search"><span>🔍</span><input name="q" placeholder="게시물, 과제, 알림장 검색" autocomplete="off"></form>
+      <div class="topbar-actions">
+        <a class="icon-btn" href="#/notifications" title="알림">🔔<span class="badge-dot" id="noti-badge" hidden>0</span></a>
+        <a class="icon-btn" href="#/messages" title="쪽지">✉️</a>
+        <a class="user-chip" href="#/me" id="user-chip" title="마이페이지"></a>
+      </div>
+    </div>
+  </header>
+
+  <div class="shell">
+    <aside class="sidebar" id="sidebar"></aside>
+    <main id="view" class="main"></main>
+    <aside class="rail" id="rail"></aside>
+  </div>
+
+  <nav class="bottom-nav" id="bottom-nav"></nav>
+  <div id="modal-root" hidden></div>
+  <div class="toast-wrap" id="toasts"></div>
+
+  {{ content }}
+
+  <script src="assets/js/data.js"></script>
+  <script src="assets/js/ai.js"></script>
+  <script src="assets/js/app.js"></script>
+</body>
+</html>
