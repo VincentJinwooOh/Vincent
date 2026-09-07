@@ -1,95 +1,73 @@
-/* ClassRing — OpenRouter API 연동 (AI 보조교사 "링고")
- * - 사용자가 직접 입력한 OpenRouter API 키를 브라우저 localStorage에만 저장 (BYOK)
- * - OpenAI 호환 Chat Completions 엔드포인트 + SSE 스트리밍
- * - 키가 없으면 "데모 모드"로 규칙 기반 초안을 생성해 화면 흐름을 체험할 수 있게 한다
+/* Bawkward — AI 계층 (OpenRouter)
+ * 원칙(방법론):
+ *  1) 학생이 먼저 관찰·질문·탐구·사유를 쓴 뒤에만 AI가 등장한다. AI는 답이 아니라 "다음 탐구질문"의 초안만 낸다.
+ *  2) 외부 모델에는 원문을 보내지 않는다. 이름·학번·학교·지역을 [학생A]·[N]·[학교]로 치환(PII 최소화)한 뒤 보낸다.
+ *  3) 모든 호출은 Run 레코드로 남는다 — masked_input · question_draft · accepted_by. 원문 컬럼은 없다.
+ *  4) 키는 이 브라우저에만 저장(BYOK)되고 openrouter.ai 로만 전송된다.
+ * 이 파일이 곧 "서버 LLM 프록시"의 브라우저 시연판이다. 실서비스에선 이 마스킹·로깅을 교내 서버로 옮긴다.
  */
 (function () {
   'use strict';
-  const NS = (window.CR = window.CR || {});
-  const KEY = 'classring.settings.v1';
+  const NS = (window.BW = window.BW || {});
+  const KEY = 'bawkward.ai.v1';
   const ENDPOINT = 'https://openrouter.ai/api/v1/chat/completions';
   const MODELS_ENDPOINT = 'https://openrouter.ai/api/v1/models';
-
-  const DEFAULTS = {
-    apiKey: '',
-    model: 'openai/gpt-4o-mini',
-    temperature: 0.7,
-  };
-  // 교육 현장에서 무난한 가성비/품질 모델 목록 (사용자가 직접 입력도 가능)
-  const SUGGESTED_MODELS = [
+  const DEFAULTS = { apiKey: '', model: 'openai/gpt-4o-mini', temperature: 0.6 };
+  const SUGGESTED = [
     { id: 'openai/gpt-4o-mini', label: 'GPT-4o mini · 빠르고 저렴' },
     { id: 'anthropic/claude-sonnet-4.5', label: 'Claude Sonnet 4.5 · 균형' },
     { id: 'google/gemini-2.5-flash', label: 'Gemini 2.5 Flash · 빠름' },
     { id: 'deepseek/deepseek-chat-v3.1', label: 'DeepSeek V3.1 · 저렴' },
-    { id: 'meta-llama/llama-3.3-70b-instruct:free', label: 'Llama 3.3 70B · 무료 엔드포인트' },
-    { id: 'openrouter/auto', label: 'Auto · OpenRouter 자동 라우팅' },
+    { id: 'meta-llama/llama-3.3-70b-instruct:free', label: 'Llama 3.3 70B · 무료' },
   ];
 
-  function settings() {
-    try { return Object.assign({}, DEFAULTS, JSON.parse(localStorage.getItem(KEY) || '{}')); } catch (e) { return Object.assign({}, DEFAULTS); }
-  }
-  function saveSettings(patch) {
-    const next = Object.assign(settings(), patch);
-    try { localStorage.setItem(KEY, JSON.stringify(next)); } catch (e) { /* ignore */ }
-    return next;
-  }
+  function settings() { try { return Object.assign({}, DEFAULTS, JSON.parse(localStorage.getItem(KEY) || '{}')); } catch (e) { return Object.assign({}, DEFAULTS); } }
+  function saveSettings(patch) { const n = Object.assign(settings(), patch); try { localStorage.setItem(KEY, JSON.stringify(n)); } catch (e) {} return n; }
   const hasKey = () => !!settings().apiKey;
 
-  function headers() {
-    const s = settings();
-    return {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${s.apiKey}`,
-      'HTTP-Referer': location.origin || 'https://classring.local',
-      'X-Title': 'ClassRing',
-    };
+  // -------- PII 마스킹 --------
+  // 알려진 학급 구성원 이름 + 일반 패턴(학번, 학교, N명, 전화)을 토큰으로 치환.
+  function maskPII(text, opts = {}) {
+    let masked = String(text || '');
+    const mapping = {};
+    let ai = 0;
+    // 1) 구성원 이름 (긴 이름부터)
+    (opts.names || []).slice().sort((a, b) => b.length - a.length).forEach((name) => {
+      if (!name || name.length < 2) return;
+      if (masked.includes(name)) {
+        const tok = `[학생${String.fromCharCode(65 + ai++)}]`;
+        mapping[tok] = name;
+        masked = masked.split(name).join(tok);
+      }
+    });
+    // 2) 학교명
+    masked = masked.replace(/([가-힣]{2,}(?:초등학교|중학교|고등학교|초|중|고))/g, (m) => { const tok = '[학교]'; mapping[tok] = mapping[tok] || m; return tok; });
+    // 3) 학년 반 번호 / N번 / N명 / N학년
+    masked = masked.replace(/\d+\s*(?:학년|반|번|명|교시|모둠)/g, (m) => m.replace(/\d+/, '[N]'));
+    // 4) 전화번호
+    masked = masked.replace(/01[016789]-?\d{3,4}-?\d{4}/g, '[전화]');
+    return { masked, mapping };
   }
+  function restorePII(text, mapping) { let out = String(text || ''); Object.entries(mapping || {}).forEach(([tok, orig]) => { out = out.split(tok).join(orig); }); return out; }
 
-  /**
-   * chat(messages, { onToken, signal, model }) → 전체 텍스트
-   * onToken 이 있으면 스트리밍, 없으면 단건 응답.
-   */
+  function headers() { const s = settings(); return { 'Content-Type': 'application/json', Authorization: `Bearer ${s.apiKey}`, 'HTTP-Referer': location.origin || 'https://bawkward.local', 'X-Title': 'Bawkward' }; }
+
   async function chat(messages, opts = {}) {
     const s = settings();
     if (!s.apiKey) { const e = new Error('NO_KEY'); e.code = 'NO_KEY'; throw e; }
-    const body = {
-      model: opts.model || s.model,
-      messages,
-      temperature: opts.temperature ?? s.temperature,
-      max_tokens: opts.maxTokens || 1200,
-      stream: !!opts.onToken,
-    };
+    const body = { model: opts.model || s.model, messages, temperature: opts.temperature ?? s.temperature, max_tokens: opts.maxTokens || 700, stream: !!opts.onToken };
     const res = await fetch(ENDPOINT, { method: 'POST', headers: headers(), body: JSON.stringify(body), signal: opts.signal });
-    if (!res.ok) {
-      let detail = '';
-      try { const j = await res.json(); detail = j.error?.message || JSON.stringify(j); } catch (e) { detail = await res.text().catch(() => ''); }
-      const err = new Error(`OpenRouter 오류 (${res.status}): ${detail || res.statusText}`);
-      err.status = res.status; throw err;
-    }
-    if (!body.stream) {
-      const j = await res.json();
-      return j.choices?.[0]?.message?.content || '';
-    }
-    // SSE 스트림 파싱
-    const reader = res.body.getReader();
-    const dec = new TextDecoder();
-    let buf = '', full = '';
+    if (!res.ok) { let d = ''; try { d = (await res.json()).error?.message; } catch (e) { d = await res.text().catch(() => ''); } const err = new Error(`OpenRouter 오류 (${res.status}): ${d || res.statusText}`); err.status = res.status; throw err; }
+    if (!body.stream) { const j = await res.json(); return j.choices?.[0]?.message?.content || ''; }
+    const reader = res.body.getReader(), dec = new TextDecoder(); let buf = '', full = '';
     for (;;) {
-      const { value, done } = await reader.read();
-      if (done) break;
-      buf += dec.decode(value, { stream: true });
-      let idx;
+      const { value, done } = await reader.read(); if (done) break;
+      buf += dec.decode(value, { stream: true }); let idx;
       while ((idx = buf.indexOf('\n')) >= 0) {
         const line = buf.slice(0, idx).trim(); buf = buf.slice(idx + 1);
-        if (!line.startsWith('data:')) continue; // OpenRouter는 ': OPENROUTER PROCESSING' 주석 라인을 보낼 수 있음
-        const data = line.slice(5).trim();
-        if (data === '[DONE]') return full;
-        try {
-          const j = JSON.parse(data);
-          const delta = j.choices?.[0]?.delta?.content || '';
-          if (delta) { full += delta; opts.onToken(delta, full); }
-          if (j.error) throw new Error(j.error.message || 'stream error');
-        } catch (e) { if (e.message && e.message !== 'Unexpected end of JSON input') { /* partial chunk */ } }
+        if (!line.startsWith('data:')) continue;
+        const data = line.slice(5).trim(); if (data === '[DONE]') return full;
+        try { const j = JSON.parse(data); const d = j.choices?.[0]?.delta?.content || ''; if (d) { full += d; opts.onToken(d, full); } } catch (e) {}
       }
     }
     return full;
@@ -97,54 +75,39 @@
 
   async function listModels() {
     const res = await fetch(MODELS_ENDPOINT, { headers: hasKey() ? { Authorization: `Bearer ${settings().apiKey}` } : {} });
-    if (!res.ok) throw new Error(`모델 목록 조회 실패 (${res.status})`);
-    const j = await res.json();
-    return (j.data || []).map((m) => ({ id: m.id, name: m.name, context: m.context_length, pricing: m.pricing }));
+    if (!res.ok) throw new Error(`모델 목록 실패 (${res.status})`);
+    return ((await res.json()).data || []).map((m) => ({ id: m.id, name: m.name, context: m.context_length, pricing: m.pricing }));
+  }
+  async function testConnection() { return (await chat([{ role: 'user', content: '한국어로 "연결 성공"만 답해줘.' }], { maxTokens: 20, temperature: 0 })).trim(); }
+
+  const SYS = [
+    '당신은 이해중심 교육과정(백워드 설계)을 돕는 조교 "Bawk"입니다.',
+    '학생이 이미 스스로 관찰·질문·탐구·사유를 쓴 뒤에만 개입합니다.',
+    '절대 정답이나 완성된 글을 대신 써 주지 않습니다. 대신 학생이 한 걸음 더 깊이 생각하도록 "다음 탐구질문"의 초안을 제안합니다.',
+    '질문은 도달점(성취기준)에 가까워지게 하되, 학생의 언어를 존중합니다.',
+    '입력에 [학생A]·[N]·[학교] 같은 토큰이 있으면 실명이 가려진 것이니 그대로 둡니다.',
+    '한국어 존댓말로, 짧고 따뜻하게. 확실치 않으면 모른다고 말합니다.',
+  ].join('\n');
+
+  function contextLine(ctx) {
+    if (!ctx) return '';
+    return `\n[맥락] 교과: ${ctx.subject || '-'} · 핵심아이디어: ${ctx.coreIdea || '-'} · 도달점: ${ctx.goal || '-'}`;
   }
 
-  async function testConnection() {
-    const text = await chat([{ role: 'user', content: '한국어로 "연결 성공" 이라고만 답해줘.' }], { maxTokens: 20, temperature: 0 });
-    return text.trim();
+  // 질문 초안 생성: 학생 일견쓰(마스킹 후)를 근거로 다음 탐구질문 2~3개.
+  async function draftInquiries(ctx, maskedWork, onToken) {
+    const prompt = `${contextLine(ctx)}\n\n학생이 쓴 내용(실명은 가려짐):\n관찰: ${maskedWork.observe}\n질문: ${maskedWork.question}\n탐구: ${maskedWork.explore}\n사유: ${maskedWork.reflect}\n\n이 학생이 도달점에 더 가까워지도록, 스스로 답을 찾게 만드는 "다음 탐구질문" 2~3개를 제안해줘. 각 질문은 한 줄. 답이나 설명은 쓰지 마.`;
+    return chat([{ role: 'system', content: SYS }, { role: 'user', content: prompt }], { onToken, maxTokens: 400 });
   }
 
-  /** 현재 사용자 컨텍스트를 요약해 시스템 프롬프트를 만든다 (개인정보 최소화: 이름·역할·일정만) */
-  function systemPrompt(ctx) {
-    const lines = [
-      '당신은 한국 초·중등 학급 소통 플랫폼 "ClassRing"에 내장된 AI 보조교사 "링고"입니다.',
-      '항상 따뜻하고 간결한 한국어 존댓말로 답하고, 교사·학생·학부모 각각의 입장을 고려합니다.',
-      '알림장·가정통신문·과제 안내·학부모 답장 초안을 요청받으면 바로 복사해 쓸 수 있는 완성된 문장으로 작성합니다.',
-      '학생에게는 답을 직접 알려주기보다 스스로 생각하도록 힌트를 주는 방식을 우선합니다.',
-      '확실하지 않은 사실은 지어내지 말고 모른다고 말하세요.',
-    ];
-    if (ctx) {
-      lines.push('', '--- 현재 사용자 컨텍스트 ---');
-      lines.push(`사용자: ${ctx.userName} (${ctx.roleLabel})`);
-      if (ctx.classes?.length) lines.push(`소속 클래스: ${ctx.classes.join(', ')}`);
-      if (ctx.upcoming?.length) lines.push(`다가오는 일정: ${ctx.upcoming.join(' / ')}`);
-      if (ctx.recent?.length) lines.push(`최근 게시물: ${ctx.recent.join(' / ')}`);
-      lines.push(`오늘 날짜: ${new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })}`);
-    }
-    return lines.join('\n');
+  // 키 없을 때 규칙 기반 데모 (질문만).
+  function demoInquiries(maskedWork, ctx) {
+    const q = [];
+    if (maskedWork.observe) q.push('네가 관찰한 그 장면에서, 겉으로 드러나지 않은 원인은 무엇일까?');
+    if (maskedWork.question) q.push(`"${maskedWork.question.slice(0, 24)}…" — 이 질문에 반대되는 입장은 뭐라고 말할까?`);
+    q.push(ctx?.goal ? `이 생각을 "${ctx.goal}"에 연결하려면 무엇을 더 알아야 할까?` : '이 생각을 다른 상황에도 적용할 수 있을까? 언제 안 통할까?');
+    return q.slice(0, 3).map((x) => '• ' + x).join('\n') + '\n\n※ 데모 모드입니다. 마이페이지에서 OpenRouter 키를 등록하면 실제 모델이 학생 글에 맞춰 제안합니다.';
   }
 
-  /** 키가 없을 때 사용하는 규칙 기반 데모 응답 */
-  function demoReply(prompt, ctx) {
-    const p = prompt.toLowerCase();
-    const cls = ctx?.classes?.[0] || '우리 반';
-    if (/알림장/.test(p)) {
-      return `📒 ${cls} 알림장 초안 (데모)\n\n1. 오늘 배운 내용 복습하기\n2. 내일 준비물 챙기기\n3. 안내장 서명 후 제출\n4. 일찍 자고 건강하게 등교하기 🌙\n\n※ OpenRouter API 키를 등록하면 실제 AI가 맥락에 맞게 작성해 드려요.`;
-    }
-    if (/과제|숙제/.test(p)) {
-      return `📝 과제 안내 초안 (데모)\n\n제목: (과제명)\n목표: 이번 단원의 핵심 개념을 스스로 정리합니다.\n방법: 교과서 해당 쪽을 읽고, 배운 내용을 5문장으로 요약해 제출하세요.\n제출: 이번 주 금요일 오후 6시까지 ClassRing 과제 탭\n\n※ 데모 모드입니다. API 키를 등록하면 학년·과목에 맞춘 안내문을 생성합니다.`;
-    }
-    if (/학부모|가정통신|답장/.test(p)) {
-      return `✉️ 학부모 안내 초안 (데모)\n\n안녕하세요, ${cls} 담임입니다.\n항상 학급 활동에 관심 가져 주셔서 감사합니다.\n(안내 내용)\n궁금한 점은 언제든 쪽지로 연락 주세요.\n감사합니다.\n\n※ 데모 모드입니다.`;
-    }
-    if (/피드백|채점/.test(p)) {
-      return `🏅 과제 피드백 초안 (데모)\n\n잘한 점: 자신의 생각을 구체적인 장면과 연결해 표현했어요.\n보완할 점: 이유를 한 문장 더 덧붙이면 설득력이 커져요.\n다음 목표: 문장 끝을 다양하게 바꿔 보기.\n\n※ 데모 모드입니다.`;
-    }
-    return `안녕하세요, 저는 ClassRing의 AI 보조교사 링고예요 🤖\n지금은 데모 모드라 정해진 예시만 보여드릴 수 있어요.\n\n마이페이지 → AI 설정에서 OpenRouter API 키를 등록하면\n• 알림장·공지 초안 작성\n• 과제 피드백 제안\n• 학부모 안내문 작성\n• 학습 내용 요약·퀴즈 생성\n을 실제 AI 모델로 도와드릴게요.`;
-  }
-
-  NS.ai = { settings, saveSettings, hasKey, chat, listModels, testConnection, systemPrompt, demoReply, SUGGESTED_MODELS, ENDPOINT };
+  NS.ai = { settings, saveSettings, hasKey, chat, listModels, testConnection, maskPII, restorePII, draftInquiries, demoInquiries, SUGGESTED, SYS, ENDPOINT };
 })();

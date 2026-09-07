@@ -1,25 +1,18 @@
-# ClassRing — 클래스팅 스타일 학급 소통 플랫폼 (Jekyll / GitHub Pages)
-#
-# 앱 자체는 순수 정적 HTML/CSS/JS 로 동작하며, Jekyll 은 레이아웃 조립과 GitHub Pages 배포에만 쓰인다.
-# 프로젝트 페이지(https://<user>.github.io/<repo>/) 로 배포할 때도 상대 경로를 쓰므로 baseurl 수정이 필요 없다.
-
-title: ClassRing
+# Bawkward — 이해중심 교육과정(백워드 설계) 학습 볼트 (Jekyll / GitHub Pages)
+# 앱은 순수 정적 HTML/CSS/JS 로 동작하며, Jekyll 은 레이아웃 조립과 배포에만 쓰인다.
+title: Bawkward
 email: your-email@example.com
 description: >-
-  교사·학생·학부모가 함께 쓰는 학급 소통 플랫폼 데모. 알림장, 과제, 출석, 설문, 앨범, 쪽지,
-  그리고 OpenRouter API 로 연결되는 AI 보조교사까지.
+  Backward Design + awkward. 도달점에서 거꾸로 설계하고 학생이 먼저 써 본 뒤 배우는 학습 볼트.
+  원본은 로컬 볼트에 남고, 외부 모델에는 마스킹된 질문 초안만 오간다.
 baseurl: ""
 url: ""
 lang: ko
-
 plugins:
   - jekyll-feed
-
-# 예전 ToyStore 튜토리얼의 상품 컬렉션은 더 이상 출력하지 않는다.
 collections:
   products:
     output: false
-
 exclude:
   - .sass-cache/
   - .jekyll-cache/
