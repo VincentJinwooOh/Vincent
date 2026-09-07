@@ -82,12 +82,12 @@
     S.myUnits().forEach((u) => {
       if (m.role === 'student') {
         const w = S.myWork(u.id);
-        if (!S.workDone(w)) out.push({ ic: '✍️', t: '일견쓰 이어쓰기', s: `${u.subject} · ${u.domain}`, go: `#/write/${u.id}` });
+        if (!S.workDone(w)) out.push({ ic: '✍️', t: '일걷쓰 이어쓰기', s: `${u.subject} · ${u.domain}`, go: `#/write/${u.id}` });
         if (!(S.retrievalOf(u.id)?.attempts?.[m.id]) && S.retrievalOf(u.id)?.keywords?.length) out.push({ ic: '🎯', t: '인출 점검', s: u.domain, go: `#/retrieve/${u.id}` });
       } else {
         if (!S.inquiriesOf(u.id).length) out.push({ ic: '🧭', t: '탐구질문 설계', s: `${u.subject} · ${u.domain}`, go: `#/unit/${u.id}` });
         const pend = S.worksOf(u.id).filter((w) => S.workDone(w)).length;
-        if (pend) out.push({ ic: '📖', t: `학급 일견쓰 ${pend}편 보기`, s: u.domain, go: `#/board/${u.id}` });
+        if (pend) out.push({ ic: '📖', t: `학급 일걷쓰 ${pend}편 보기`, s: u.domain, go: `#/board/${u.id}` });
       }
     });
     return out.slice(0, 6);
@@ -101,7 +101,7 @@
       <div class="steps" style="flex-direction:column;align-items:stretch;gap:6px">
         <div class="step"><span class="n">1</span> 핵심아이디어 · 도달점</div>
         <div class="step"><span class="n">2</span> 탐구질문 연역</div>
-        <div class="step"><span class="n">3</span> 일견쓰(먼저 쓰기)</div>
+        <div class="step"><span class="n">3</span> 일걷쓰(먼저 쓰기)</div>
         <div class="step"><span class="n">4</span> 인출 · 갭</div>
         <div class="step"><span class="n">5</span> 전이</div>
       </div>
@@ -146,8 +146,8 @@
     const doneN = works.filter((w) => S.workDone(w)).length;
     const total = S.classmates(u.classId).length;
     let status = '';
-    if (teacher) status = `<span class="chip line">탐구질문 ${inqN}</span> <span class="chip line">일견쓰 ${doneN}/${total}</span>`;
-    else { const w = S.myWork(u.id); status = S.workDone(w) ? '<span class="chip ok">일견쓰 완료</span>' : w ? '<span class="chip warn">쓰는 중</span>' : '<span class="chip line">시작 전</span>'; }
+    if (teacher) status = `<span class="chip line">탐구질문 ${inqN}</span> <span class="chip line">일걷쓰 ${doneN}/${total}</span>`;
+    else { const w = S.myWork(u.id); status = S.workDone(w) ? '<span class="chip ok">일걷쓰 완료</span>' : w ? '<span class="chip warn">쓰는 중</span>' : '<span class="chip line">시작 전</span>'; }
     return `<div class="card unit-hero" style="cursor:pointer" data-action="goto" data-go="#/unit/${u.id}">
       <div class="row between wrap mb-8">
         <div class="row wrap"><span class="chip subject">${esc(u.subject)}</span><span class="chip grade">${esc(u.grade)}</span><span class="chip domain">${esc(u.domain)}</span></div>
@@ -163,7 +163,7 @@
     const teacher = S.me().role === 'teacher';
     const units = S.myUnits();
     return `<div class="page-head"><div class="section-title">📚 ${teacher ? '단원 설계' : '내 단원'}</div>${teacher ? `<button class="btn primary" data-action="new-unit">+ 단원 설계</button>` : ''}</div>
-    <div class="note mb-16">백워드 설계 순서: <b>①도달점 → ②탐구질문 → ③평가(인출·전이) → ④활동(일견쓰)</b>. 진도가 아니라 도달점에서 시작합니다.</div>
+    <div class="note mb-16">백워드 설계 순서: <b>①도달점 → ②탐구질문 → ③평가(인출·전이) → ④활동(일걷쓰)</b>. 진도가 아니라 도달점에서 시작합니다.</div>
     ${units.length ? units.map(unitCard).join('') : `<div class="card empty"><div class="big">📚</div>단원이 없어요.</div>`}`;
   }
 
@@ -202,7 +202,7 @@
     <div class="card">
       <div class="card-title">🎓 학습 루프</div>
       <div class="grid-3">
-        ${loopTile('✍️', '일견쓰', '먼저 써 본다', teacher ? `#/board/${u.id}` : `#/write/${u.id}`, teacher ? `학급 ${S.worksOf(u.id).filter(S.workDone).length}편` : (S.workDone(S.myWork(u.id)) ? '완료' : '이어쓰기'))}
+        ${loopTile('✍️', '일걷쓰', '먼저 써 본다', teacher ? `#/board/${u.id}` : `#/write/${u.id}`, teacher ? `학급 ${S.worksOf(u.id).filter(S.workDone).length}편` : (S.workDone(S.myWork(u.id)) ? '완료' : '이어쓰기'))}
         ${loopTile('🎯', '인출 · 갭', '키워드로 도달점 점검', `#/retrieve/${u.id}`, r?.keywords?.length ? `키워드 ${r.keywords.length}` : (teacher ? '설정 필요' : '대기'))}
         ${loopTile('🔀', '전이', '도구교과 · 실생활로', teacher ? `#/board/${u.id}` : (S.myWork(u.id) ? `#/transfer/${S.myWork(u.id).id}` : `#/write/${u.id}`), '연결')}
       </div>
@@ -210,15 +210,15 @@
   }
   const loopTile = (ic, t, d, href, badge) => `<div class="ce" style="cursor:pointer;text-align:left" data-action="goto" data-go="${href}"><div class="h" style="color:var(--accent-600)">${ic} ${t}</div><div class="small muted" style="margin-bottom:6px">${d}</div><span class="chip line">${esc(badge)}</span></div>`;
 
-  // ---------------- Firstwrite (일견쓰) ----------------
+  // ---------------- Firstwrite (일걷쓰) ----------------
   function viewWrite(unitId) {
     const u = S.unit(unitId), m = S.me();
     if (!u || !S.canAccessUnit(u)) return `<div class="card empty"><div class="big">🔒</div>접근 권한이 없어요.</div>`;
     const w = S.myWork(unitId) || {};
     const inqs = S.inquiriesOf(unitId);
     const done = NS.STAGES.filter((s) => (w[s.key] || '').trim()).length;
-    return `<div class="crumb"><a href="#/unit/${u.id}">${esc(u.domain)}</a> › 일견쓰</div>
-    <div class="page-head"><div><div class="section-title">✍️ 일견쓰</div><div class="small muted">${esc(u.coreIdea)}</div></div><div class="chip ${done === 4 ? 'ok' : 'line'}">${done}/4 단계</div></div>
+    return `<div class="crumb"><a href="#/unit/${u.id}">${esc(u.domain)}</a> › 일걷쓰</div>
+    <div class="page-head"><div><div class="section-title">✍️ 일걷쓰</div><div class="small muted">${esc(u.coreIdea)}</div></div><div class="chip ${done === 4 ? 'ok' : 'line'}">${done}/4 단계</div></div>
     ${inqs.length ? `<div class="note mb-16">오늘의 탐구질문: <b>${esc(inqs[0].question)}</b></div>` : ''}
     <div class="note mb-16" style="border-color:var(--accent);background:var(--accent-50)">먼저 <b>스스로</b> 씁니다. 네 글을 다 쓴 뒤에야 Bawk 조교가 <b>다음 질문</b>을 제안해요 — 답을 대신 쓰지 않습니다.</div>
     <form data-form="write" data-id="${unitId}">
@@ -256,7 +256,7 @@
     ${r.keywords.length ? `<div class="card"><div class="card-title">키워드를 눌러 인출</div>
       <div class="row wrap" style="gap:8px">${r.keywords.map((k) => { const hit = a && a.hits.includes(k.term); return `<button class="kw ${a ? (hit ? 'hit' : 'miss') : ''}" data-action="toggle-kw" data-id="${unitId}" data-term="${esc(k.term)}" ${a ? 'disabled' : ''}>${esc(k.term)} <span class="w">${k.weight}점</span></button>`; }).join('')}</div>
       ${a ? `<div class="mt-16"><div class="row between small"><span>인출 점수</span><span class="bold">${sc.got}/${sc.total}점 · ${sc.pct}%</span></div><div class="meter mt-8"><span style="width:${sc.pct}%"></span></div>
-        ${gap.missing.length ? `<div class="mt-12"><div class="small bold mb-8">🔧 보충할 갭 (안 떠오른 키워드)</div>${gap.missing.map((t) => `<span class="gap-tag missing">${esc(t)}</span>`).join('')}<div class="small muted mt-8">이 키워드로 교과서·자료를 다시 보고, 일견쓰의 ‘탐구’에 보충해 보세요.</div></div>` : '<div class="chip ok mt-12">모든 키워드를 인출했어요! 🎉</div>'}` : `<button class="btn primary block mt-16" data-action="submit-kw" data-id="${unitId}">인출 제출</button>`}
+        ${gap.missing.length ? `<div class="mt-12"><div class="small bold mb-8">🔧 보충할 갭 (안 떠오른 키워드)</div>${gap.missing.map((t) => `<span class="gap-tag missing">${esc(t)}</span>`).join('')}<div class="small muted mt-8">이 키워드로 교과서·자료를 다시 보고, 일걷쓰의 ‘탐구’에 보충해 보세요.</div></div>` : '<div class="chip ok mt-12">모든 키워드를 인출했어요! 🎉</div>'}` : `<button class="btn primary block mt-16" data-action="submit-kw" data-id="${unitId}">인출 제출</button>`}
     </div>` : '<div class="card empty"><div class="big">🕐</div>선생님이 아직 키워드를 정하지 않았어요.</div>'}`;
   }
 
@@ -288,20 +288,20 @@
     const u = S.unit(unitId); if (!u) return `<div class="card empty"><div class="big">🔍</div>단원 없음</div>`;
     if (!S.isTeacherOf(u.classId)) return `<div class="card empty"><div class="big">🔒</div>교사만 학급 문집을 볼 수 있어요.</div>`;
     const works = S.worksOf(unitId);
-    return `<div class="crumb"><a href="#/unit/${u.id}">${esc(u.domain)}</a> › 학급 일견쓰</div>
-    <div class="page-head"><div class="section-title">📖 학급 일견쓰 <span class="small muted">${works.filter(S.workDone).length}/${S.classmates(u.classId).length}편 완성</span></div><button class="btn" data-action="export-md">📄 볼트 .md 내보내기</button></div>
+    return `<div class="crumb"><a href="#/unit/${u.id}">${esc(u.domain)}</a> › 학급 일걷쓰</div>
+    <div class="page-head"><div class="section-title">📖 학급 일걷쓰 <span class="small muted">${works.filter(S.workDone).length}/${S.classmates(u.classId).length}편 완성</span></div><button class="btn" data-action="export-md">📄 볼트 .md 내보내기</button></div>
     <div class="note mb-16">이 문집은 <b>학급 내부</b>에만 있습니다. 학부모·외부 공개 링크는 기본으로 만들지 않습니다(방법론: 공개 기본값 금지).</div>
     ${works.length ? works.map((w) => { const st = S.user(w.studentId); const t = S.transferOf(w.id); return `<div class="work">
       <div class="head">${avatar(st, 'sm')}<div class="grow"><div class="bold">${esc(st.name)}</div><div class="tiny muted">${fmt.ago(w.updatedAt || w.createdAt)}${S.workDone(w) ? '' : ' · 작성 중'}</div></div>${t && t.checks.every((c) => c.ok) ? '<span class="chip ok">전이 완료</span>' : ''}</div>
       <div class="small"><b>관찰</b> ${esc(w.observe || '—')}<br><b>질문</b> ${esc(w.question || '—')}<br><b>탐구</b> ${esc(w.explore || '—')}<br><b>사유</b> ${esc(w.reflect || '—')}</div>
-    </div>`; }).join('') : '<div class="card empty"><div class="big">🍃</div>아직 제출된 일견쓰가 없어요.</div>'}`;
+    </div>`; }).join('') : '<div class="card empty"><div class="big">🍃</div>아직 제출된 일걷쓰가 없어요.</div>'}`;
   }
 
   // ---------------- STATEtistics ----------------
   function viewStats() {
     const series = S.semesterSeries();
     const m = S.me();
-    const tabs = [['retrieval', '인출 적중률', '%', 'var(--accent)'], ['transfer', '전이 성공률', '%', 'var(--teal)'], ['rhythm', '일견쓰 리듬', '%', 'var(--indigo)'], ['gap', '평균 갭(개)', '', 'var(--plum)']];
+    const tabs = [['retrieval', '인출 적중률', '%', 'var(--accent)'], ['transfer', '전이 성공률', '%', 'var(--teal)'], ['rhythm', '일걷쓰 리듬', '%', 'var(--indigo)'], ['gap', '평균 갭(개)', '', 'var(--plum)']];
     const cur = tabs.find((t) => t[0] === ui.statTab) || tabs[0];
     const first = series[0], last = series[series.length - 1];
     const delta = last && first ? (last[cur[0]] - first[cur[0]]) : 0;
@@ -318,7 +318,7 @@
         <div class="stat-grid" style="grid-template-columns:1fr 1fr">
           <div class="stat"><div class="n" style="color:var(--accent)">${last ? last.retrieval : 0}%</div><div class="l">인출 적중</div></div>
           <div class="stat"><div class="n" style="color:var(--teal)">${last ? last.transfer : 0}%</div><div class="l">전이 성공</div></div>
-          <div class="stat"><div class="n" style="color:var(--indigo)">${last ? last.rhythm : 0}%</div><div class="l">일견쓰 리듬</div></div>
+          <div class="stat"><div class="n" style="color:var(--indigo)">${last ? last.rhythm : 0}%</div><div class="l">일걷쓰 리듬</div></div>
           <div class="stat"><div class="n" style="color:var(--plum)">${last ? last.gap : 0}</div><div class="l">평균 갭</div></div>
         </div>
       </div>
@@ -357,7 +357,7 @@
     return `<div class="page-head"><div><div class="section-title">🔐 볼트 · 주권 원장</div><div class="small muted">원본은 어디에, 무엇이 외부로 나갔는지 한눈에</div></div></div>
 
     <div class="card"><div class="card-title">🛡 데이터 주권 원칙</div>
-      <div class="sov-item"><span class="ic">📁</span><div><div class="t">원본은 로컬 볼트</div><div class="s">일견쓰·전이 원문은 이 브라우저 localStorage에만. 서버로 원문을 보내지 않습니다. (.md/.json으로 이사 가능)</div></div></div>
+      <div class="sov-item"><span class="ic">📁</span><div><div class="t">원본은 로컬 볼트</div><div class="s">일걷쓰·전이 원문은 이 브라우저 localStorage에만. 서버로 원문을 보내지 않습니다. (.md/.json으로 이사 가능)</div></div></div>
       <div class="sov-item"><span class="ic">🧑‍🏫</span><div><div class="t">학생이 먼저, AI는 나중</div><div class="s">네 단계를 다 쓴 뒤에만 AI가 질문 초안을 제안. 답을 대신 쓰지 않습니다.</div></div></div>
       <div class="sov-item"><span class="ic">🎭</span><div><div class="t">외부에는 비식별 텍스트만</div><div class="s">이름·학번·학교·전화를 토큰으로 치환한 뒤 전송. 아래가 실제 마스킹 예시입니다.</div></div></div>
       <div class="mask-demo mt-8" style="margin-left:34px">${maskedHtml}</div>
@@ -370,7 +370,7 @@
     </div>
 
     <div class="card"><div class="card-title">🗂 볼트 관리</div>
-      <div class="row wrap"><button class="btn" data-action="export-json">전체 .json 내보내기</button><button class="btn" data-action="export-md">일견쓰 .md 내보내기</button><label class="btn">.json 가져오기<input type="file" accept="application/json" data-action="import-json" hidden></label></div>
+      <div class="row wrap"><button class="btn" data-action="export-json">전체 .json 내보내기</button><button class="btn" data-action="export-md">일걷쓰 .md 내보내기</button><label class="btn">.json 가져오기<input type="file" accept="application/json" data-action="import-json" hidden></label></div>
       <div class="small muted mt-8">볼트가 앱보다 오래 살도록: .md는 어떤 편집기로도 열립니다.</div>
     </div>
 
@@ -468,7 +468,7 @@
   function purgeModal() {
     openModal(`${mHead('🧨 학기말 파기')}<form class="modal-body" data-form="purge">
       <div class="note mb-12" style="border-color:var(--bad);background:#fdf3f3">되돌릴 수 없습니다. 지울 항목을 고르세요.</div>
-      ${[['works', '일견쓰 원문'], ['retrievals', '인출 기록'], ['transfers', '전이 기록'], ['signals', '주간 신호(그래프)'], ['runs', 'AI 호출 원장'], ['codes', '학생 코드표(가명 해제)']].map(([k, l]) => `<label class="row" style="padding:6px 0"><input type="checkbox" name="${k}" checked> ${l}</label>`).join('')}
+      ${[['works', '일걷쓰 원문'], ['retrievals', '인출 기록'], ['transfers', '전이 기록'], ['signals', '주간 신호(그래프)'], ['runs', 'AI 호출 원장'], ['codes', '학생 코드표(가명 해제)']].map(([k, l]) => `<label class="row" style="padding:6px 0"><input type="checkbox" name="${k}" checked> ${l}</label>`).join('')}
       <div class="modal-foot" style="padding:8px 0 0"><button type="button" class="btn" data-action="close-modal">취소</button><button class="btn danger" type="submit">영구 파기</button></div>
     </form>`);
   }
@@ -519,7 +519,7 @@
       case 'switch': S.setUser(id); ui.aiMsgs = []; toast(`${S.me().name} 계정으로 전환`); go('#/'); render(); break;
       case 'reset': if (confirm('볼트를 초기 상태로 되돌릴까요?')) { S.reset(); ui.aiMsgs = []; go('#/'); render(); } break;
       case 'export-json': download(`bawkward-${NS.util.today()}.json`, S.exportJSON(), 'application/json'); toast('내보냈어요'); break;
-      case 'export-md': download(`bawkward-${NS.util.today()}.md`, S.exportMarkdown(), 'text/markdown'); toast('일견쓰 .md 내보냄'); break;
+      case 'export-md': download(`bawkward-${NS.util.today()}.md`, S.exportMarkdown(), 'text/markdown'); toast('일걷쓰 .md 내보냄'); break;
       case 'purge': purgeModal(); break;
       case 'ai-test': { const o = $('#ai-test-r'); o.textContent = '확인 중…'; try { const f = el.closest('form'); AI.saveSettings({ apiKey: f.apiKey.value.trim(), model: f.model.value.trim() }); const r = await AI.testConnection(); o.textContent = '✅ ' + r; toast('연결 성공', 'ok'); render(); } catch (e) { o.textContent = '❌ ' + (e.code === 'NO_KEY' ? '키를 입력하세요' : e.message); } break; }
       case 'add-student': { const n = prompt('학생 이름'); if (n && n.trim()) { S.addStudent(el.dataset.class, n.trim()); toast('추가했어요', 'ok'); render(); } break; }

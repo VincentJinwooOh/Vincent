@@ -94,7 +94,7 @@
     return `\n[맥락] 교과: ${ctx.subject || '-'} · 핵심아이디어: ${ctx.coreIdea || '-'} · 도달점: ${ctx.goal || '-'}`;
   }
 
-  // 질문 초안 생성: 학생 일견쓰(마스킹 후)를 근거로 다음 탐구질문 2~3개.
+  // 질문 초안 생성: 학생 일걷쓰(마스킹 후)를 근거로 다음 탐구질문 2~3개.
   async function draftInquiries(ctx, maskedWork, onToken) {
     const prompt = `${contextLine(ctx)}\n\n학생이 쓴 내용(실명은 가려짐):\n관찰: ${maskedWork.observe}\n질문: ${maskedWork.question}\n탐구: ${maskedWork.explore}\n사유: ${maskedWork.reflect}\n\n이 학생이 도달점에 더 가까워지도록, 스스로 답을 찾게 만드는 "다음 탐구질문" 2~3개를 제안해줘. 각 질문은 한 줄. 답이나 설명은 쓰지 마.`;
     return chat([{ role: 'system', content: SYS }, { role: 'user', content: prompt }], { onToken, maxTokens: 400 });

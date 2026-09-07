@@ -1,7 +1,7 @@
 /* Bawkward — 볼트 데이터 계층
  * 원본은 로컬(localStorage)에 남는 볼트. 서버·회사 클라우드로 원문을 보내지 않는다.
  * 이 계층만 파일 동기화(교내 NAS/Git)나 자체 API로 치환하면 된다. 스키마는 방법론 노트 그대로:
- *   Unit(핵심아이디어) → Inquiry(탐구질문) → Work(일견쓰) → Retrieval(인출) → Gap(파생) → Transfer(전이)
+ *   Unit(핵심아이디어) → Inquiry(탐구질문) → Work(일걷쓰) → Retrieval(인출) → Gap(파생) → Transfer(전이)
  *   Run(AI 호출 로그, 원문 없음) · Signal(주간 비식별 신호) · AccessLog
  */
 (function () {
@@ -84,7 +84,7 @@
       { id: 'q2', unitId: 'u1', order: 2, source: 'teacher', question: '결정에 ‘책임진다’는 것은 무엇을 뜻할까?', children: ['내가 낸 의견이 채택되면 나는 무엇을 해야 하나?'] },
       { id: 'q3', unitId: 'u2', order: 1, source: 'teacher', question: '같은 주장도 왜 어떤 글은 설득되고 어떤 글은 설득되지 않을까?', children: ['근거가 ‘타당하다’는 것을 어떻게 알 수 있을까?'] },
     ];
-    // 일견쓰(Work): 관찰→질문→탐구→사유. 학생이 먼저 쓴 원본. 볼트에만 존재.
+    // 일걷쓰(Work): 관찰→질문→탐구→사유. 학생이 먼저 쓴 원본. 볼트에만 존재.
     const works = [
       {
         id: 'w1', unitId: 'u1', inquiryId: 'q1', classId: 'c1', studentId: 's1',
@@ -223,7 +223,7 @@
   }
   function removeInquiry(id) { state.inquiries = state.inquiries.filter((q) => q.id !== id); save(); }
 
-  // ---- Works (일견쓰) ----
+  // ---- Works (일걷쓰) ----
   const worksOf = (unitId) => state.works.filter((w) => w.unitId === unitId).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   function myWork(unitId, studentId = currentUserId) { return state.works.find((w) => w.unitId === unitId && w.studentId === studentId); }
   function saveWork(unitId, inquiryId, fields) {
@@ -332,14 +332,14 @@
   // ---- Sovereignty: export / import / purge ----
   function exportJSON() { return JSON.stringify(state, null, 2); }
   function importJSON(text) { const s = JSON.parse(text); if (!s.units || !s.users) throw new Error('볼트 형식이 아니에요'); state = s; save(); }
-  // 학생 원본(일견쓰)만 Markdown 번들로. 볼트가 앱보다 오래 살도록 — 어떤 앱으로도 읽힌다.
+  // 학생 원본(일걷쓰)만 Markdown 번들로. 볼트가 앱보다 오래 살도록 — 어떤 앱으로도 읽힌다.
   function exportMarkdown() {
     let md = `# Bawkward 볼트 내보내기\n> ${new Date().toLocaleString('ko-KR')} · 원본은 학생·교사의 것입니다.\n\n`;
     myUnits().forEach((u) => {
       md += `\n## [${u.subject}] ${u.domain}\n**핵심 아이디어:** ${u.coreIdea}\n\n**도달점:** ${u.goal}\n\n`;
       inquiriesOf(u.id).forEach((q) => { md += `- 탐구질문: ${q.question}\n`; });
       worksOf(u.id).filter((w) => isTeacherOf(u.classId) || w.studentId === currentUserId).forEach((w) => {
-        md += `\n### 일견쓰 — ${user(w.studentId).name}\n- 관찰: ${w.observe}\n- 질문: ${w.question}\n- 탐구: ${w.explore}\n- 사유: ${w.reflect}\n`;
+        md += `\n### 일걷쓰 — ${user(w.studentId).name}\n- 관찰: ${w.observe}\n- 질문: ${w.question}\n- 탐구: ${w.explore}\n- 사유: ${w.reflect}\n`;
       });
     });
     return md;
