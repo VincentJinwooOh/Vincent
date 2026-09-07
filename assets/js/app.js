@@ -19,9 +19,26 @@
 
   // ---- toast / modal ----
   function toast(m, k = '') { const w = $('#toasts'); const e = document.createElement('div'); e.className = `toast ${k}`; e.textContent = m; w.appendChild(e); setTimeout(() => { e.style.opacity = '0'; e.style.transition = 'opacity .3s'; setTimeout(() => e.remove(), 300); }, 2200); }
-  function openModal(html, o = {}) { const r = $('#modal-root'); r.innerHTML = `<div class="modal-back" data-action="modal-back"><div class="modal ${o.wide ? 'wide' : ''}" role="dialog">${html}</div></div>`; r.hidden = false; document.body.style.overflow = 'hidden'; const f = r.querySelector('input:not([type=hidden]),textarea,select'); if (f) setTimeout(() => f.focus(), 30); }
-  function closeModal() { const r = $('#modal-root'); r.innerHTML = ''; r.hidden = true; document.body.style.overflow = ''; }
-  const mHead = (t) => `<div class="modal-head"><h3>${t}</h3><button class="icon-btn" data-action="close-modal">✕</button></div>`;
+  // 접근성: role=dialog + aria-modal + 제목 연결, Tab 포커스 트랩(keydown 핸들러), 닫을 때 이전 포커스 복원.
+  const FOCUSABLE = 'a[href],button:not([disabled]),input:not([type=hidden]):not([disabled]),textarea:not([disabled]),select:not([disabled]),[tabindex]:not([tabindex="-1"])';
+  function openModal(html, o = {}) {
+    const r = $('#modal-root'); ui.lastFocus = document.activeElement;
+    r.innerHTML = `<div class="modal-back" data-action="modal-back"><div class="modal ${o.wide ? 'wide' : ''}" role="dialog" aria-modal="true" aria-labelledby="modal-title">${html}</div></div>`;
+    r.hidden = false; document.body.style.overflow = 'hidden';
+    const f = r.querySelector('input:not([type=hidden]),textarea,select') || r.querySelector(FOCUSABLE); if (f) setTimeout(() => f.focus(), 30);
+  }
+  function closeModal() {
+    const r = $('#modal-root'); if (r.hidden) return; r.innerHTML = ''; r.hidden = true; document.body.style.overflow = '';
+    const b = ui.lastFocus; ui.lastFocus = null; if (b && document.contains(b) && typeof b.focus === 'function') b.focus();
+  }
+  function trapTab(ev) {
+    const r = $('#modal-root'); if (r.hidden) return;
+    const els = [...r.querySelectorAll(FOCUSABLE)].filter((e) => e.offsetParent !== null); if (!els.length) return;
+    const first = els[0], last = els[els.length - 1], cur = document.activeElement, inside = r.contains(cur);
+    if (ev.shiftKey) { if (!inside || cur === first) { ev.preventDefault(); last.focus(); } }
+    else if (!inside || cur === last) { ev.preventDefault(); first.focus(); }
+  }
+  const mHead = (t) => `<div class="modal-head"><h3 id="modal-title">${t}</h3><button class="icon-btn" data-action="close-modal" aria-label="닫기">✕</button></div>`;
 
   // ---- router ----
   function parse() {
@@ -191,7 +208,7 @@
         <div class="ce skill"><div class="h">🛠 과정·기능</div><ul>${ce.skill.map((x) => `<li>${esc(x)}</li>`).join('') || '<li class="muted">—</li>'}</ul></div>
         <div class="ce value"><div class="h">🌱 가치·태도</div><ul>${ce.value.map((x) => `<li>${esc(x)}</li>`).join('') || '<li class="muted">—</li>'}</ul></div>
       </div>
-      ${u.standards?.length ? `<div class="mt-16"><div class="small bold mb-8">성취기준</div>${u.standards.map((s) => `<div class="inq" style="margin-bottom:6px"><span class="mono small" style="color:var(--accent-600)">${esc(s.code || '')}</span> ${esc(s.text)}${s.note ? `<div class="child">해설: ${esc(s.note)}</div>` : ''}</div>`).join('')}</div>` : ''}
+      ${u.standards?.length ? `<div class="mt-16"><div class="small bold mb-8">성취기준</div>${u.standards.map((s) => `<div class="inq" style="margin-bottom:6px"><span class="mono small" style="color:var(--accent-600)">${esc(s.code || '')}</span> ${esc(s.text)}${stdNote(s.note)}</div>`).join('')}</div>` : ''}
     </div>
 
     <div class="card">
@@ -208,6 +225,8 @@
       </div>
     </div>`;
   }
+  // 성취기준 note: 문서 신뢰도 표기(검색확인/대조필요)는 칩으로, 그 외는 해설로.
+  const stdNote = (n) => !n ? '' : n === '검색확인' ? ' <span class="chip ok" title="공개 검색에서 문장까지 확인됨">검색확인</span>' : n === '대조필요' ? ' <span class="chip warn" title="교육부 고시 원문으로 문장·코드를 확정해야 함">대조필요</span>' : `<div class="child">해설: ${esc(n)}</div>`;
   const loopTile = (ic, t, d, href, badge) => `<div class="ce" style="cursor:pointer;text-align:left" data-action="goto" data-go="${href}"><div class="h" style="color:var(--accent-600)">${ic} ${t}</div><div class="small muted" style="margin-bottom:6px">${d}</div><span class="chip line">${esc(badge)}</span></div>`;
 
   // ---------------- Firstwrite (일걷쓰) ----------------
@@ -226,7 +245,7 @@
       <div class="row between wrap"><button class="btn primary lg" type="submit">저장 (볼트에만 기록)</button>
       <button class="btn soft" type="button" data-action="ai-from-work" data-id="${unitId}" ${done < 4 ? 'disabled title="네 단계를 모두 쓴 뒤 열려요"' : ''}>🐣 다 썼어요 — 다음 질문 받기</button></div>
     </form>
-    <div id="ai-inline" class="mt-16"></div>`;
+    <div id="ai-inline" class="mt-16" aria-live="polite"></div>`;
   }
 
   // ---------------- Retrieval / Gap ----------------
@@ -254,7 +273,7 @@
     <div class="section-title mb-16">🎯 인출 점검</div>
     <div class="note mb-16">도달점: <b>${esc(u.goal)}</b><br>배운 내용에서 <b>스스로 떠오르는</b> 키워드를 눌러 표시하세요. 안 떠오른 것이 곧 보충할 <b>갭</b>입니다.</div>
     ${r.keywords.length ? `<div class="card"><div class="card-title">키워드를 눌러 인출</div>
-      <div class="row wrap" style="gap:8px">${r.keywords.map((k) => { const hit = a && a.hits.includes(k.term); return `<button class="kw ${a ? (hit ? 'hit' : 'miss') : ''}" data-action="toggle-kw" data-id="${unitId}" data-term="${esc(k.term)}" ${a ? 'disabled' : ''}>${esc(k.term)} <span class="w">${k.weight}점</span></button>`; }).join('')}</div>
+      <div class="row wrap" style="gap:8px">${r.keywords.map((k) => { const hit = a && a.hits.includes(k.term); return `<button class="kw ${a ? (hit ? 'hit' : 'miss') : ''}" data-action="toggle-kw" data-id="${unitId}" data-term="${esc(k.term)}" aria-pressed="${!!hit}" ${a ? 'disabled' : ''}>${esc(k.term)} <span class="w">${k.weight}점</span></button>`; }).join('')}</div>
       ${a ? `<div class="mt-16"><div class="row between small"><span>인출 점수</span><span class="bold">${sc.got}/${sc.total}점 · ${sc.pct}%</span></div><div class="meter mt-8"><span style="width:${sc.pct}%"></span></div>
         ${gap.missing.length ? `<div class="mt-12"><div class="small bold mb-8">🔧 보충할 갭 (안 떠오른 키워드)</div>${gap.missing.map((t) => `<span class="gap-tag missing">${esc(t)}</span>`).join('')}<div class="small muted mt-8">이 키워드로 교과서·자료를 다시 보고, 일걷쓰의 ‘탐구’에 보충해 보세요.</div></div>` : '<div class="chip ok mt-12">모든 키워드를 인출했어요! 🎉</div>'}` : `<button class="btn primary block mt-16" data-action="submit-kw" data-id="${unitId}">인출 제출</button>`}
     </div>` : '<div class="card empty"><div class="big">🕐</div>선생님이 아직 키워드를 정하지 않았어요.</div>'}`;
@@ -307,11 +326,11 @@
     const delta = last && first ? (last[cur[0]] - first[cur[0]]) : 0;
     return `<div class="page-head"><div><div class="section-title">📈 STATEtistics</div><div class="small muted">학기초 → 학기말, 비식별 <b>숫자 신호</b>만. 원문·이름은 볼트에 남습니다.</div></div></div>
     <div class="note mb-16">이 그래프는 학생 글을 담지 않습니다. 볼트가 매주 내보낸 <b>주간 신호</b>(적중·갭·전이·리듬)만 그립니다. 학기말에 신호·코드표·원문을 함께 파기할 수 있어요(볼트 → 원장).</div>
-    <div class="tabs mb-16">${tabs.map((t) => `<button class="tab ${ui.statTab === t[0] ? 'active' : ''}" data-action="stat-tab" data-id="${t[0]}">${t[1]}</button>`).join('')}</div>
+    <div class="tabs mb-16" role="tablist" aria-label="신호 종류">${tabs.map((t) => `<button class="tab ${ui.statTab === t[0] ? 'active' : ''}" role="tab" aria-selected="${ui.statTab === t[0]}" data-action="stat-tab" data-id="${t[0]}">${t[1]}</button>`).join('')}</div>
     <div class="chartbox mb-16">
       <div class="h">${cur[1]} <span class="chip ${delta >= 0 ? 'ok' : 'bad'}" style="float:right">${delta >= 0 ? '▲' : '▼'} ${Math.abs(delta).toFixed(cur[0] === 'gap' ? 1 : 0)}${cur[2]}</span></div>
       <div class="sub">학기초 ${first ? first[cur[0]] : 0}${cur[2]} → 최근 ${last ? last[cur[0]] : 0}${cur[2]} · 학급 평균 ${last ? last.n : 0}명</div>
-      ${lineChart(series.map((s) => s[cur[0]]), series.map((s) => s.week.replace(/^\d+-/, '')), cur[3], cur[0] === 'gap')}
+      ${lineChart(series.map((s) => s[cur[0]]), series.map((s) => s.week.replace(/^\d+-/, '')), cur[3], cur[0] === 'gap', cur[1], cur[2])}
     </div>
     <div class="grid-2">
       <div class="chartbox"><div class="h">이번 학기 4대 신호</div><div class="sub">최근 주 기준</div>
@@ -328,10 +347,13 @@
       </div>
     </div>`;
   }
-  // 간단한 SVG 라인차트 (0~100 또는 0~max). 접근성: 값은 위 텍스트로도 제공.
-  function lineChart(vals, labels, color, isCount) {
+  // 간단한 SVG 라인차트 (0~100 또는 0~max). 접근성: <title>/<desc>에 학기초·최근·최대·최소를 문장으로, 주별 값은 sr-only 표로 제공.
+  function lineChart(vals, labels, color, isCount, name = '추이', unit = '') {
     const W = 640, H = 200, pad = { l: 34, r: 12, t: 14, b: 24 };
     if (!vals.length) return '<div class="empty small">데이터 없음</div>';
+    const hi = Math.max(...vals), lo = Math.min(...vals);
+    const desc = `${name}: ${labels.length}주 동안 ${vals[0]}${unit}에서 ${vals[vals.length - 1]}${unit}로. 최고 ${hi}${unit}(${labels[vals.indexOf(hi)]}), 최저 ${lo}${unit}(${labels[vals.indexOf(lo)]}).`;
+    const table = `<table class="sr-only"><caption>${esc(name)} 주별 값</caption><thead><tr><th scope="col">주차</th><th scope="col">${esc(name)}</th></tr></thead><tbody>${vals.map((v, i) => `<tr><td>${esc(labels[i])}</td><td>${v}${esc(unit)}</td></tr>`).join('')}</tbody></table>`;
     const max = isCount ? Math.max(6, Math.ceil(Math.max(...vals))) : 100;
     const iw = W - pad.l - pad.r, ih = H - pad.t - pad.b;
     const x = (i) => pad.l + (vals.length === 1 ? iw / 2 : (i / (vals.length - 1)) * iw);
@@ -342,9 +364,10 @@
     const xlabels = labels.map((l, i) => i % step === 0 ? `<text class="axis-lbl" x="${x(i)}" y="${H - 6}" text-anchor="middle">${esc(l)}</text>` : '').join('');
     const dots = vals.map((v, i) => `<circle class="dot" cx="${x(i).toFixed(1)}" cy="${y(v).toFixed(1)}" r="3.5" fill="${color}"/>`).join('');
     const area = `${pad.l},${pad.t + ih} ${pts} ${x(vals.length - 1)},${pad.t + ih}`;
-    return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="추이 그래프" style="overflow:visible">
+    return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-labelledby="chart-title" aria-describedby="chart-desc" style="overflow:visible">
+      <title id="chart-title">${esc(name)} 추이 그래프</title><desc id="chart-desc">${esc(desc)}</desc>
       <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${color}" stop-opacity=".18"/><stop offset="1" stop-color="${color}" stop-opacity="0"/></linearGradient></defs>
-      ${grid}<polygon points="${area}" fill="url(#g)"/><polyline class="ln" points="${pts}" stroke="${color}"/>${dots}${xlabels}</svg>`;
+      ${grid}<polygon points="${area}" fill="url(#g)"/><polyline class="ln" points="${pts}" stroke="${color}"/>${dots}${xlabels}</svg>${table}`;
   }
 
   // ---------------- Vault / sovereignty ledger ----------------
@@ -443,11 +466,15 @@
   // ---------------- modals ----------------
   function unitModal() {
     openModal(`${mHead('📚 단원 설계 — 도달점에서 거꾸로')}<form class="modal-body" data-form="unit">
+      <div class="field"><label>교육과정 템플릿 <span class="tiny muted">docs/curriculum 의 매핑 제안 · 탐구질문·인출 키워드까지 함께 생성</span></label>
+        <select name="template"><option value="">직접 설계 (빈 양식)</option>${NS.TEMPLATES.map((t) => `<option value="${t.id}">${esc(t.label)}</option>`).join('')}</select>
+        <div class="hint">템플릿의 성취기준은 <b>검색확인</b>/<b>대조필요</b> 상태가 붙어 있어요. 고시 원문으로 확정한 뒤 문장을 고쳐 쓰세요.</div></div>
       <div class="grid-2"><div class="field"><label>교과</label><select name="subject">${NS.SUBJECTS.map((s) => `<option>${s}</option>`).join('')}</select></div><div class="field"><label>학년</label><input name="grade" value="초6"></div></div>
       <div class="field"><label>영역</label><input name="domain" required placeholder="예) 정치·민주주의"></div>
       <div class="field"><label>핵심 아이디어</label><textarea name="coreIdea" required placeholder="이 단원이 결국 이해하게 하려는 큰 생각"></textarea></div>
       <div class="field"><label>도달점 (GOAL)</label><textarea name="goal" required placeholder="학생이 무엇을 할 수 있으면 도달한 것인가"></textarea></div>
       <div class="grid-3"><div class="field"><label>지식·이해 (줄바꿈)</label><textarea name="know" style="min-height:70px"></textarea></div><div class="field"><label>과정·기능</label><textarea name="skill" style="min-height:70px"></textarea></div><div class="field"><label>가치·태도</label><textarea name="value" style="min-height:70px"></textarea></div></div>
+      <div class="field"><label>성취기준 (한 줄에 하나 · <span class="mono">[코드] 문장</span>)</label><textarea name="standards" style="min-height:70px" placeholder="[6과03-01] 생활 속 에너지 전환 사례를 …"></textarea></div>
       <div class="modal-foot" style="padding:8px 0 0"><button type="button" class="btn" data-action="close-modal">취소</button><button class="btn primary" type="submit">단원 만들기</button></div>
     </form>`, { wide: true });
   }
@@ -507,11 +534,11 @@
       case 'del-inq': S.removeInquiry(id); render(); break;
       case 'add-kw': kwModal(id); break;
       case 'del-kw': { const r = S.ensureRetrieval(id); r.keywords.splice(+el.dataset.i, 1); S.save(); render(); break; }
-      case 'toggle-kw': { el.classList.toggle('sel-pending'); el.style.borderColor = el.classList.contains('sel-pending') ? 'var(--ok)' : ''; el.style.background = el.classList.contains('sel-pending') ? 'var(--ok-50)' : ''; break; }
+      case 'toggle-kw': { el.classList.toggle('sel-pending'); el.setAttribute('aria-pressed', el.classList.contains('sel-pending')); el.style.borderColor = el.classList.contains('sel-pending') ? 'var(--ok)' : ''; el.style.background = el.classList.contains('sel-pending') ? 'var(--ok-50)' : ''; break; }
       case 'submit-kw': {
         const chosen = [...document.querySelectorAll('.kw.sel-pending')].map((k) => k.dataset.term);
-        const r = S.retrievalOf(id); const wrong = r.keywords.filter((k) => false).map((k) => k.term);
-        S.recordAttempt(id, chosen, wrong); toast('인출 제출 완료', 'ok'); render(); break;
+        if (!chosen.length && !confirm('떠오른 키워드가 없나요? 그대로 제출하면 모든 키워드가 갭으로 기록돼요.')) break;
+        S.recordAttempt(id, chosen, []); toast('인출 제출 완료', 'ok'); render(); break;
       }
       case 'ai-from-work': aiFromWork(id); break;
       case 'ai-clear': ui.aiMsgs = []; render(); break;
@@ -526,7 +553,17 @@
       default: break;
     }
   });
-  document.addEventListener('input', (ev) => { const el = ev.target; if (el.name === 'modelSelect') { const f = el.closest('form'); if (el.value !== '__c') f.model.value = el.value; } });
+  document.addEventListener('input', (ev) => {
+    const el = ev.target;
+    if (el.name === 'modelSelect') { const f = el.closest('form'); if (el.value !== '__c') f.model.value = el.value; }
+    if (el.name === 'template') { const t = NS.TEMPLATES.find((x) => x.id === el.value); const f = el.closest('form'); if (!f) return;
+      const set = (k, v) => { if (f[k]) f[k].value = v; };
+      if (!t) { ['domain', 'coreIdea', 'goal', 'know', 'skill', 'value', 'standards'].forEach((k) => set(k, '')); return; }
+      set('subject', t.subject); set('grade', t.grade); set('domain', t.domain); set('coreIdea', t.coreIdea); set('goal', t.goal);
+      set('know', t.contentElements.know.join('\n')); set('skill', t.contentElements.skill.join('\n')); set('value', t.contentElements.value.join('\n'));
+      set('standards', t.standards.map((x) => `${x.code} ${x.text}`).join('\n'));
+    }
+  });
   document.addEventListener('change', (ev) => { const el = ev.target; if (el.dataset.action === 'import-json' && el.files?.[0]) { const fr = new FileReader(); fr.onload = () => { try { S.importJSON(fr.result); toast('가져왔어요', 'ok'); render(); } catch (e) { toast('실패: ' + e.message, 'bad'); } }; fr.readAsText(el.files[0]); } });
 
   document.addEventListener('submit', (ev) => {
@@ -534,7 +571,13 @@
     const kind = form.dataset.form, id = form.dataset.id, f = new FormData(form), v = (k) => (f.get(k) || '').toString().trim();
     const lines = (k) => v(k).split('\n').map((x) => x.trim()).filter(Boolean);
     switch (kind) {
-      case 'unit': { const u = S.addUnit({ classId: S.myClasses()[0].id, subject: v('subject'), grade: v('grade'), domain: v('domain'), coreIdea: v('coreIdea'), goal: v('goal'), contentElements: { know: lines('know'), skill: lines('skill'), value: lines('value') } }); closeModal(); toast('단원을 만들었어요 🎉', 'ok'); go(`#/unit/${u.id}`); break; }
+      case 'unit': {
+        const tpl = NS.TEMPLATES.find((x) => x.id === v('template'));
+        const standards = lines('standards').map((l) => { const m = l.match(/^(\[[^\]]+\])\s*(.*)$/); const code = m ? m[1] : '', text = m ? m[2] : l; const src = tpl?.standards.find((x) => x.code === code && x.text === text); return src ? Object.assign({}, src) : { code, text }; });
+        const data = { classId: S.myClasses()[0].id, subject: v('subject'), grade: v('grade'), domain: v('domain'), coreIdea: v('coreIdea'), goal: v('goal'), contentElements: { know: lines('know'), skill: lines('skill'), value: lines('value') }, standards, templateId: tpl?.id };
+        const u = S.addUnit(data);
+        if (tpl) { (tpl.inquiries || []).forEach((q) => S.addInquiry(u.id, q.question, 'teacher', (q.children || []).slice())); if (tpl.keywords?.length) S.setKeywords(u.id, tpl.keywords.map((k) => Object.assign({}, k))); }
+        closeModal(); toast(tpl ? '템플릿으로 단원·탐구질문·키워드를 만들었어요 🎉' : '단원을 만들었어요 🎉', 'ok'); go(`#/unit/${u.id}`); break; }
       case 'inq': S.addInquiry(id, v('question'), 'teacher', lines('children')); closeModal(); render(); toast('탐구질문 추가', 'ok'); break;
       case 'kw': { const r = S.ensureRetrieval(id); r.keywords.push({ term: v('term'), weight: +v('weight') || 1 }); S.save(); closeModal(); render(); break; }
       case 'write': { S.saveWork(id, S.inquiriesOf(id)[0]?.id, { observe: v('observe'), question: v('question'), explore: v('explore'), reflect: v('reflect') }); toast('볼트에 저장했어요 (외부 전송 없음)', 'ok'); render(); break; }
@@ -545,7 +588,7 @@
       default: break;
     }
   });
-  document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape' && !$('#modal-root').hidden) closeModal(); });
+  document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape' && !$('#modal-root').hidden) closeModal(); else if (ev.key === 'Tab') trapTab(ev); });
   window.addEventListener('hashchange', render);
 
   S.load(); render();

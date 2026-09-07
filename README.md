@@ -23,7 +23,7 @@
 
 | 화면 | 설명 | 역할 |
 |---|---|---|
-| `#/units`, `#/unit/:id` | 핵심아이디어·내용체계·성취기준·**도달점**·탐구질문 | 교사가 설계 |
+| `#/units`, `#/unit/:id` | 핵심아이디어·내용체계·성취기준·**도달점**·탐구질문. 단원 설계 모달에서 **교육과정 템플릿**(초3 영어·초6 과학) 선택 시 탐구질문·인출 키워드까지 생성 | 교사가 설계 |
 | `#/write/:unitId` | 일걷쓰 4단. 다 쓴 뒤에만 Bawk 조교가 **다음 질문** 제안 | 학생 |
 | `#/retrieve/:unitId` | 키워드 인출 → 안 떠오른 것 = 보충할 **갭** | 교사(설계)/학생(인출) |
 | `#/transfer/:workId` | 내용교과 → 도구교과 → 실생활, 체크 3칸 | 학생 |
@@ -56,6 +56,17 @@ bundle install && bundle exec jekyll serve   # → http://localhost:4000
 
 GitHub Pages: Settings → Pages 에서 브랜치만 지정하면 됩니다. `baseurl` 은 비워도 상대 경로로 동작합니다.
 
+## 검증 (스모크 테스트)
+
+```bash
+node --check assets/js/data.js && node --check assets/js/ai.js && node --check assets/js/app.js
+npm i -D playwright && npx playwright install chromium   # 최초 1회
+node tests/smoke.cjs        # 교사·학생 전 흐름 + 데이터 주권 불변식 24건, 내장 정적 서버로 실행
+# 전역 playwright 를 쓰려면: PLAYWRIGHT_MODULE=/path/to/node_modules/playwright node tests/smoke.cjs
+```
+
+불변식이 테스트로 고정돼 있습니다: 4단 완성 전 AI 잠금 · 원장에 원문 없음 · 이름 미포함 · 학생 문집 차단 · 파기 시 원문·코드표·신호·원장 동시 삭제 · 모달 포커스 트랩 · 모바일 가로 넘침 없음.
+
 ## OpenRouter 연결 (선택)
 
 키가 없으면 **데모 모드**로 규칙 기반 질문이 나옵니다. 실제 모델을 쓰려면:
@@ -69,10 +80,12 @@ GitHub Pages: Settings → Pages 에서 브랜치만 지정하면 됩니다. `ba
 ```
 _layouts/app.html      앱 셸 (Liquid 는 {{ content }} 한 줄)
 assets/css/app.css     디자인 토큰(종이·잉크·테라코타) · 반응형
-assets/js/data.js      볼트 스토어 · 스키마 · 인가 · 마스킹 신호 · export/파기
+assets/js/data.js      볼트 스토어 · 스키마 · 인가 · 마스킹 신호 · export/파기 · 교육과정 템플릿(BW.TEMPLATES)
 assets/js/ai.js        OpenRouter 프록시(브라우저판) · PII 마스킹 · 질문 초안 전용
 assets/js/app.js       해시 라우터 · 뷰 · SVG 차트 · 이벤트 위임
 docs/BAWKWARD_METHOD.md  방법론 → 구현 설계 노트 (사실/판단/미검증 구분)
+docs/curriculum/       2022 개정 초3 영어·초6 과학 정리 (신뢰도 표기, 템플릿의 출처)
+tests/smoke.cjs        Playwright 스모크 테스트 (서버·빌드 없이 실행)
 ```
 
 이 앱은 다른 서비스를 그대로 베낀 것이 아니라, 공개된 교육과정과 개인정보 보호 원칙에서

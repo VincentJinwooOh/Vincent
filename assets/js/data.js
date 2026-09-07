@@ -331,7 +331,15 @@
 
   // ---- Sovereignty: export / import / purge ----
   function exportJSON() { return JSON.stringify(state, null, 2); }
-  function importJSON(text) { const s = JSON.parse(text); if (!s.units || !s.users) throw new Error('볼트 형식이 아니에요'); state = s; save(); }
+  function importJSON(text) {
+    const s = JSON.parse(text);
+    if (!s || !Array.isArray(s.units) || !Array.isArray(s.users) || !Array.isArray(s.classes) || !Array.isArray(s.members)) throw new Error('볼트 형식이 아니에요');
+    if (s.version !== 1) throw new Error(`볼트 버전(${s.version ?? '?'})이 달라요`);
+    ['inquiries', 'works', 'retrievals', 'transfers', 'runs', 'signals', 'accessLog'].forEach((k) => { if (!Array.isArray(s[k])) s[k] = []; });
+    state = s;
+    if (!state.users.some((u) => u.id === currentUserId)) setUser((state.users.find((u) => u.role === 'teacher') || state.users[0]).id);
+    logAccess('vault:import', `${state.units.length} units`); save();
+  }
   // 학생 원본(일걷쓰)만 Markdown 번들로. 볼트가 앱보다 오래 살도록 — 어떤 앱으로도 읽힌다.
   function exportMarkdown() {
     let md = `# Bawkward 볼트 내보내기\n> ${new Date().toLocaleString('ko-KR')} · 원본은 학생·교사의 것입니다.\n\n`;
@@ -356,6 +364,63 @@
     save();
   }
 
+  // ---- 교육과정 템플릿: docs/curriculum/*.md 의 "Bawkward 단원 매핑 제안"을 그대로 옮긴 시드 후보.
+  // 성취기준 문장은 상태([검색확인]/[대조필요])를 note 에 남겨, 원문 확정 전엔 초안임이 화면에 보이게 한다.
+  NS.TEMPLATES = [
+    {
+      id: 'tpl-eng3', label: '초3 영어 · 소리로 만나는 영어 (2022 개정 3~4학년군)', subject: '영어', grade: '초3', domain: '이해·표현 — 소리·인사·자기소개',
+      coreIdea: '쉽고 친숙한 영어는 소리로 먼저 만나고, 흥미를 가지고 듣고 따라 말하며 익힌다.',
+      goal: '친숙한 소재의 쉬운 영어 노래·이야기를 흥미를 갖고 듣고, 인사·자기소개를 말과 글로 표현할 수 있다.',
+      contentElements: { know: ['알파벳과 소리', '기초 낱말', '인사·자기소개 표현'], skill: ['듣고 따라 말하기', '세부정보 파악', '낱말 쓰기'], value: ['흥미·자신감', '공감하며 듣기'] },
+      standards: [
+        { code: '[4영01-03]', text: '쉽고 간단한 단어, 어구, 문장을 듣고 강세, 리듬, 억양을 식별한다.', note: '검색확인' },
+        { code: '[4영01-08]', text: '다양한 매체로 표현된 담화나 문장을 흥미를 가지고 듣거나 읽는다.', note: '검색확인' },
+        { code: '[4영01-09]', text: '시, 노래, 이야기를 공감하며 듣는다.', note: '검색확인' },
+        { code: '[4영02-09]', text: '적절한 매체나 전략을 활용하여 창의적으로 의미를 표현한다.', note: '검색확인' },
+      ],
+      inquiries: [
+        { question: '같은 인사도 왜 상황마다 다르게 말할까?', children: ['아침·저녁·처음 만났을 때 인사는 어떻게 다를까?'] },
+        { question: '노래로 배우면 왜 더 잘 외워질까?', children: ['리듬이 있으면 어떤 낱말이 더 잘 들릴까?'] },
+      ],
+      keywords: [{ term: '알파벳', weight: 1 }, { term: '강세·리듬', weight: 2 }, { term: '인사', weight: 2 }, { term: '자기소개', weight: 3 }],
+    },
+    {
+      id: 'tpl-sci6-energy', label: '초6 과학 · 에너지의 전환 (2022 개정 5~6학년군)', subject: '과학', grade: '초6', domain: '운동과 에너지 — 에너지와 생활',
+      coreIdea: '에너지는 형태를 바꾸며 이동하고, 우리 생활은 그 전환을 이용해 이루어진다.',
+      goal: '생활 속 에너지 전환 사례를 찾아, 어떤 형태에서 어떤 형태로 바뀌는지 근거를 들어 설명할 수 있다.',
+      contentElements: { know: ['에너지의 형태(열·빛·전기·운동·화학)', '에너지 전환'], skill: ['사례 관찰·분류하기', '전환 과정 추리하기', '자료로 설명하기'], value: ['에너지 절약의 필요성 인식'] },
+      standards: [
+        { code: '[6과□□-□□]', text: '(에너지 형태와 전환 관련 성취기준 — 교육부 고시 별책9 원문으로 확정)', note: '대조필요' },
+      ],
+      inquiries: [
+        { question: '전등이 켜지기까지 에너지는 몇 번 모습을 바꿀까?', children: ['발전소에서 우리 집까지 에너지는 어떤 길을 지날까?'] },
+        { question: '에너지는 사라지지 않는다는데 왜 우리는 ‘아껴’ 써야 할까?', children: [] },
+      ],
+      keywords: [{ term: '에너지 형태', weight: 2 }, { term: '전환', weight: 3 }, { term: '열에너지', weight: 1 }, { term: '전기에너지', weight: 1 }, { term: '절약', weight: 2 }],
+    },
+    {
+      id: 'tpl-sci6-season', label: '초6 과학 · 계절의 변화 (2022 개정 5~6학년군)', subject: '과학', grade: '초6', domain: '지구와 우주 — 계절의 변화',
+      coreIdea: '지구와 달·태양의 규칙적인 운동이 낮과 밤, 계절, 달의 모양 변화를 만든다.',
+      goal: '계절의 변화가 지구 자전축의 기울기와 공전으로 생김을 모형으로 설명할 수 있다.',
+      contentElements: { know: ['태양의 남중 고도', '낮의 길이', '자전축의 기울기와 공전'], skill: ['고도·그림자 길이 측정', '모형 실험 설계', '자료 해석'], value: ['증거에 기반한 판단', '오개념 점검 태도'] },
+      standards: [
+        { code: '[6과□□-□□]', text: '(계절의 변화 원인 관련 성취기준 — 교육부 고시 별책9 원문으로 확정)', note: '대조필요' },
+      ],
+      inquiries: [
+        { question: '여름이 더운 건 태양이 가까워져서일까?', children: ['남중 고도가 높으면 왜 더 더울까?', '낮의 길이는 계절마다 왜 달라질까?'] },
+      ],
+      keywords: [{ term: '남중 고도', weight: 3 }, { term: '자전축 기울기', weight: 3 }, { term: '공전', weight: 2 }, { term: '낮의 길이', weight: 1 }],
+    },
+  ];
+  // 템플릿 → 단원 + 탐구질문 + 인출 키워드 한 번에 생성.
+  function addUnitFromTemplate(tplId, classId) {
+    const t = NS.TEMPLATES.find((x) => x.id === tplId); if (!t) throw new Error('템플릿이 없어요');
+    const u = addUnit({ classId, subject: t.subject, grade: t.grade, domain: t.domain, coreIdea: t.coreIdea, goal: t.goal, contentElements: JSON.parse(JSON.stringify(t.contentElements)), standards: JSON.parse(JSON.stringify(t.standards)), templateId: t.id });
+    (t.inquiries || []).forEach((q) => addInquiry(u.id, q.question, 'teacher', (q.children || []).slice()));
+    if (t.keywords?.length) setKeywords(u.id, t.keywords.map((k) => Object.assign({}, k)));
+    return u;
+  }
+
   NS.util = { uid, today, iso, thisWeek };
   NS.SUBJECTS = ['국어', '사회', '수학', '과학', '도덕', '영어', '실과', '미술', '음악', '체육', '창의적 체험활동'];
   NS.STAGES = [
@@ -371,6 +436,6 @@
     worksOf, myWork, saveWork, workDone,
     retrievalOf, ensureRetrieval, setKeywords, recordAttempt, gapFor, retrievalScore,
     transferOf, saveTransfer, logRun, acceptRun, runs, accessLog, studentCode,
-    semesterSeries, addStudent, exportJSON, importJSON, exportMarkdown, purgeTerm,
+    semesterSeries, addStudent, exportJSON, importJSON, exportMarkdown, purgeTerm, addUnitFromTemplate,
   };
 })();
