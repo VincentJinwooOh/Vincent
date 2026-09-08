@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>계절별 태양의 남중 고도와 낮의 길이 — 수업 웹앱</title>
+<meta name="description" content="초등 과학 '계절의 변화' 단원 수업용 웹앱. 계절별 태양의 남중 고도와 낮의 길이를 가상 관측하고, 그래프로 나타내고, 관계를 추론합니다.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jua&family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27%3E%3Ccircle cx=%2750%27 cy=%2750%27 r=%2732%27 fill=%27%23ffd93b%27 stroke=%27%23ff9a00%27 stroke-width=%278%27/%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-icon">☀️</span>
+    <div>
+      <div class="brand-title">계절별 태양의 남중 고도와 낮의 길이</div>
+      <div class="brand-sub">과학 · 계절의 변화</div>
+    </div>
+  </div>
+  <nav class="tabs" id="tabs" aria-label="수업 단계">
+    <button class="tab active" data-target="s-intro"><b>1</b>도입</button>
+    <button class="tab" data-target="s-goal"><b>2</b>배울 내용</button>
+    <button class="tab" data-target="s-method"><b>3</b>조사 방법</button>
+    <button class="tab" data-target="s-observe"><b>4</b>가상 관측</button>
+    <button class="tab" data-target="s-inquiry"><b>5</b>탐구 활동</button>
+    <button class="tab" data-target="s-path"><b>6</b>남중 고도 변화</button>
+    <button class="tab" data-target="s-wrap"><b>7</b>정리</button>
+  </nav>
+  <div class="loc">
+    <label for="locSelect">📍 관측 위치</label>
+    <select id="locSelect"></select>
+  </div>
+</header>
+
+<main id="main">
+
+<!-- ================= 1. 도입 ================= -->
+<section class="panel active" id="s-intro">
+  <h2 class="q"><span class="q-icon">✏️</span>여름과 겨울에 오후 6시 모습은 어떻게 다른지 이야기해 봅시다.</h2>
+  <div class="intro-wrap">
+    <div class="compare" id="compare">
+      <div class="scene-layer" id="sceneSummer"></div>
+      <div class="scene-layer scene-top" id="sceneWinter"></div>
+      <div class="divider" id="divider"><div class="handle">좌우로<br>드래그하세요</div></div>
+      <div class="season-badge summer">여름</div>
+      <div class="season-badge winter">겨울</div>
+      <div class="clock" id="introClock"></div>
+    </div>
+    <div class="intro-controls">
+      <label>시각 바꿔 보기 <b id="introTimeLabel">오후 6:00</b></label>
+      <input type="range" id="introTime" min="900" max="1260" step="10" value="1080">
+      <div class="readout-row">
+        <span class="chip summer">여름(6월 21일) 태양 고도 <b id="introAltSummer">—</b></span>
+        <span class="chip winter">겨울(12월 22일) 태양 고도 <b id="introAltWinter">—</b></span>
+      </div>
+    </div>
+  </div>
+  <div class="answer-lines">
+    <div class="answer-line">
+      <span>• 여름의 오후 6시에는</span>
+      <input class="answer-input" id="ans-summer" placeholder="여기에 써 보세요">
+      <button class="ex-btn" data-example="아직 해가 떠 있어서 밝다">예시</button><span>.</span>
+    </div>
+    <div class="answer-line">
+      <span>• 겨울의 오후 6시에는</span>
+      <input class="answer-input" id="ans-winter" placeholder="여기에 써 보세요">
+      <button class="ex-btn" data-example="해가 이미 져서 어둡다">예시</button><span>.</span>
+    </div>
+  </div>
+  <p class="think">💡 같은 오후 6시인데 왜 다를까요? 태양이 하늘에 <b>얼마나 높이</b> 뜨고, <b>얼마나 오래</b> 떠 있는지가 계절마다 다르기 때문입니다.</p>
+</section>
+
+<!-- ================= 2. 배울 내용 ================= -->
+<section class="panel" id="s-goal">
+  <div class="goal-card">
+    <div class="goal-head">🤖 오늘 배울 내용</div>
+    <ul class="goal-list">
+      <li>계절별 태양의 <b>남중 고도</b>와 <b>낮의 길이</b>를 조사할 수 있다.</li>
+      <li>계절별 태양의 남중 고도와 낮의 길이를 <b>그래프로 나타내고</b>, 서로의 <b>관계를 설명</b>할 수 있다.</li>
+    </ul>
+  </div>
+  <div class="term-grid">
+    <div class="term">
+      <h3>남중(南中)</h3>
+      <p>태양이 하루 중 <b>정남쪽</b>에 왔을 때. 이때 태양의 고도가 하루 중 가장 높습니다.</p>
+    </div>
+    <div class="term">
+      <h3>남중 고도</h3>
+      <p>태양이 남중했을 때 <b>지평선과 태양이 이루는 각</b>. 각도(°)로 나타냅니다.</p>
+    </div>
+    <div class="term">
+      <h3>낮의 길이</h3>
+      <p><b>일출부터 일몰까지</b> 걸린 시간. 시간과 분으로 나타냅니다.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 3. 조사 방법 ================= -->
+<section class="panel" id="s-method">
+  <h2 class="q"><span class="q-icon">🔍</span>태양의 남중 고도와 낮의 길이를 조사하는 방법을 알아봅시다.</h2>
+  <div class="two-col">
+    <ol class="steps">
+      <li><span class="num">1</span><div><a href="https://astro.kasi.re.kr" target="_blank" rel="noopener">한국천문연구원 천문우주지식정보</a>에 접속한 다음, <b>‘생활 천문관’</b>을 선택한다.</div></li>
+      <li><span class="num">2</span><div>태양의 남중 고도는 <a href="https://astro.kasi.re.kr/life/pageView/10" target="_blank" rel="noopener">‘태양 고도 / 방위각 계산’</a> – ‘요청 시각의 태양 위치 자료’를 선택한 뒤에 날짜와 시각, 위치를 입력하고 조사한다.</div></li>
+      <li><span class="num">3</span><div>낮의 길이는 <a href="https://astro.kasi.re.kr/life/pageView/9" target="_blank" rel="noopener">‘일출 일몰 시각 계산’</a>을 선택한 뒤에 날짜와 위치를 입력하고 조사한다.</div></li>
+    </ol>
+    <div class="calc">
+      <div class="calc-head">🧮 우리 반 계산기 <small>(인터넷 없이도 같은 방법으로 계산)</small></div>
+      <div class="calc-row">
+        <label>날짜 <input type="date" id="calcDate" value="2026-03-21"></label>
+        <label>시각 <input type="time" id="calcTime" value="12:30"></label>
+      </div>
+      <div class="calc-grid">
+        <div class="calc-box"><span>요청 시각의 태양 고도</span><b id="calcAlt">—</b></div>
+        <div class="calc-box"><span>요청 시각의 방위각</span><b id="calcAz">—</b></div>
+        <div class="calc-box hi"><span>남중 시각</span><b id="calcNoon">—</b></div>
+        <div class="calc-box hi"><span>남중 고도</span><b id="calcMerAlt">—</b></div>
+        <div class="calc-box"><span>일출</span><b id="calcRise">—</b></div>
+        <div class="calc-box"><span>일몰</span><b id="calcSet">—</b></div>
+        <div class="calc-box hi wide"><span>낮의 길이 (일몰 − 일출)</span><b id="calcDay">—</b></div>
+      </div>
+      <p class="hint">방위각은 북쪽을 0°로 하여 시계 방향으로 잰 각입니다. 방위각이 180°에 가까울 때 태양이 남중합니다.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 4. 가상 관측 ================= -->
+<section class="panel" id="s-observe">
+  <h2 class="q"><span class="q-icon">🔭</span>어떻게 할까요? — 스마트 기기의 천체 관측 프로그램처럼 남쪽 하늘을 관찰해 봅시다.</h2>
+  <div class="observe-wrap">
+    <div class="observe-left">
+      <div class="month-row" id="monthRow"></div>
+      <canvas id="skyCanvas" width="1000" height="520"></canvas>
+      <div class="time-row">
+        <button class="btn" id="btnPlay">▶ 하루 재생</button>
+        <input type="range" id="obsTime" min="240" max="1260" step="5" value="750">
+        <b id="obsTimeLabel">12:30</b>
+        <button class="btn primary" id="btnNoon">☀ 남중 시각으로</button>
+      </div>
+    </div>
+    <div class="observe-right">
+      <div class="readout">
+        <div class="ro-title" id="roDate">3월 21일</div>
+        <div class="ro-grid">
+          <div><span>태양 고도</span><b id="roAlt">—</b></div>
+          <div><span>방위각</span><b id="roAz">—</b></div>
+          <div class="hi"><span>남중 시각</span><b id="roNoon">—</b></div>
+          <div class="hi"><span>남중 고도</span><b id="roMerAlt">—</b></div>
+          <div><span>일출</span><b id="roRise">—</b></div>
+          <div><span>일몰</span><b id="roSet">—</b></div>
+          <div class="hi wide"><span>낮의 길이</span><b id="roDay">—</b></div>
+        </div>
+        <div class="btn-row">
+          <button class="btn primary" id="btnRecord">📝 이 달 기록하기</button>
+          <button class="btn" id="btnRecordAll">12달 모두 기록</button>
+          <button class="btn ghost" id="btnClearRecords">기록 지우기</button>
+        </div>
+      </div>
+      <div class="records">
+        <div class="rec-head">관측 기록 <small id="recCount">(0/12)</small></div>
+        <table class="rec-table" id="recTable">
+          <thead><tr><th>월</th><th>남중 고도</th><th>낮의 길이</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <ol class="steps small">
+    <li><span class="num">1</span><div>‘위치’에서 우리나라를 선택하고, ‘날짜/시간’에 3월 21일 오후 12시 30분을 입력한다.</div></li>
+    <li><span class="num">2</span><div>남쪽 하늘이 보이는 화면에서 태양이 <b>남중했을 때</b>(방위각 180°) 태양의 위치와 고도를 관찰한다.</div></li>
+    <li><span class="num">3</span><div>4월, 5월, 6월, …, 1월, 2월로 바꾸면서 태양이 남중했을 때 태양의 위치를 관찰하고 기록한다.</div></li>
+  </ol>
+</section>
+
+<!-- ================= 5. 탐구 활동 ================= -->
+<section class="panel" id="s-inquiry">
+  <div class="inq-head">
+    <span class="inq-badge">탐구<br>활동</span>
+    <span class="inq-title">계절별 태양의 남중 고도, 낮의 길이의 관계 알아보기</span>
+    <div class="subtabs" id="inqTabs">
+      <button class="sub active" data-sub="inq1">1</button>
+      <button class="sub" data-sub="inq2">2</button>
+      <button class="sub" data-sub="inq3">3</button>
+    </div>
+  </div>
+
+  <div class="subpanel active" id="inq1">
+    <h3 class="q"><span class="q-num">1</span>그래프에 조사한 태양의 남중 고도와 낮의 길이를 꺾은선그래프로 나타내 봅시다.</h3>
+    <div class="graph-wrap">
+      <div class="graph-tools">
+        <div class="seg">
+          <button class="seg-btn alt active" data-series="alt">● 남중 고도 찍기</button>
+          <button class="seg-btn day" data-series="day">● 낮의 길이 찍기</button>
+        </div>
+        <span class="graph-status" id="graphStatus">그래프 위를 클릭하여 점을 찍으세요. (한 칸 = 1° / 6분)</span>
+        <div class="btn-row">
+          <button class="btn" id="btnFromRecords">📝 관측 기록 불러오기</button>
+          <button class="btn primary" id="btnExample">✔ 예시 보기</button>
+          <button class="btn ghost" id="btnGraphClear">지우기</button>
+        </div>
+      </div>
+      <canvas id="graphCanvas" width="1100" height="620"></canvas>
+      <table class="data-table" id="dataTable">
+        <thead><tr><th>측정 시기(월)</th></tr></thead>
+        <tbody>
+          <tr class="row-alt"><th>남중 고도(°)</th></tr>
+          <tr class="row-day"><th>낮의 길이</th></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="subpanel" id="inq2">
+    <h3 class="q"><span class="q-num">2</span>계절별 태양의 남중 고도와 낮의 길이 그래프를 비교해 봅시다.</h3>
+    <table class="cmp-table" id="cmpTable">
+      <tr><th rowspan="2" class="lab alt">태양의<br>남중 고도</th><td>가장 높은 달</td><td class="cell"><select data-key="altMaxMonth" data-kind="month"></select></td><td>가장 높은 계절</td><td class="cell"><select data-key="altMaxSeason" data-kind="season"></select></td></tr>
+      <tr><td>가장 낮은 달</td><td class="cell"><select data-key="altMinMonth" data-kind="month"></select></td><td>가장 낮은 계절</td><td class="cell"><select data-key="altMinSeason" data-kind="season"></select></td></tr>
+      <tr><th rowspan="2" class="lab day">낮의<br>길이</th><td>가장 긴 달</td><td class="cell"><select data-key="dayMaxMonth" data-kind="month"></select></td><td>가장 긴 계절</td><td class="cell"><select data-key="dayMaxSeason" data-kind="season"></select></td></tr>
+      <tr><td>가장 짧은 달</td><td class="cell"><select data-key="dayMinMonth" data-kind="month"></select></td><td>가장 짧은 계절</td><td class="cell"><select data-key="dayMinSeason" data-kind="season"></select></td></tr>
+    </table>
+    <div class="btn-row center">
+      <button class="btn primary big" id="btnCmpCheck">✔ 정답 확인</button>
+      <button class="btn ghost" id="btnCmpReset">다시 하기</button>
+    </div>
+    <p class="feedback" id="cmpFeedback"></p>
+  </div>
+
+  <div class="subpanel" id="inq3">
+    <h3 class="q"><span class="q-num">3</span>계절별 태양의 남중 고도와 낮의 길이는 서로 어떤 관계가 있는지 추론해 봅시다.</h3>
+    <div class="infer">
+      <p>• 여름에는 태양의 남중 고도가
+        <span class="blank" data-blank="b1" data-answer="높고"><span class="pick" data-v="높고">높고</span><span class="pick" data-v="낮고">낮고</span></span>, 낮의 길이가
+        <span class="blank" data-blank="b2" data-answer="길다"><span class="pick" data-v="길다">길다</span><span class="pick" data-v="짧다">짧다</span></span>.</p>
+      <p>• 겨울에는 태양의 남중 고도가
+        <span class="blank" data-blank="b3" data-answer="낮고"><span class="pick" data-v="높고">높고</span><span class="pick" data-v="낮고">낮고</span></span>, 낮의 길이가
+        <span class="blank" data-blank="b4" data-answer="짧다"><span class="pick" data-v="길다">길다</span><span class="pick" data-v="짧다">짧다</span></span>.</p>
+      <p class="conclusion" id="inferResult"></p>
+    </div>
+    <div class="falsify">
+      <div class="falsify-head">🧪 더 나아가기 — 이 규칙은 <b>어디에서나</b> 맞을까요? 반례를 찾아봅시다.</div>
+      <p>과학의 주장은 <b>틀릴 수 있는지 시험</b>해 보아야 튼튼해집니다. 다른 위치에서도 “남중 고도가 높을수록 낮이 길다”가 성립하는지 확인해 보세요.</p>
+      <div class="falsify-row">
+        <label>위치 <select id="falsifyLoc"></select></label>
+        <span class="falsify-note" id="falsifyNote"></span>
+      </div>
+      <table class="season-table" id="falsifyTable">
+        <thead><tr><th>날짜</th><th>남중 고도</th><th>남중 방위</th><th>일출</th><th>일몰</th><th>낮의 길이</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 6. 남중 고도 변화 ================= -->
+<section class="panel" id="s-path">
+  <div class="inq-head bulb">
+    <span class="inq-badge">💡</span>
+    <span class="inq-title">계절에 따른 태양의 남중 고도 변화</span>
+  </div>
+  <h3 class="q"><span class="q-num">1</span>계절에 따라 태양의 남중 고도는 어떻게 달라지는지 이야기해 봅시다. <small class="right-note">✱ 계절을 클릭하세요.</small></h3>
+  <div class="path-wrap">
+    <div class="path-scene" id="pathScene"></div>
+    <div class="path-side">
+      <div class="season-btns" id="seasonBtns">
+        <button class="sbtn summer" data-season="summer">여름</button>
+        <button class="sbtn winter" data-season="winter">겨울</button>
+        <button class="sbtn spring" data-season="equinox">봄,가을</button>
+      </div>
+      <div class="path-card" id="pathCard">
+        <div class="path-card-text">계절을 선택하세요.</div>
+      </div>
+      <div class="path-controls">
+        <label class="check"><input type="checkbox" id="chkOverlay"> 세 계절 겹쳐 보기</label>
+        <button class="btn" id="btnPathPlay">▶ 태양 움직이기</button>
+      </div>
+      <div class="path-readout" id="pathReadout"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 7. 정리 ================= -->
+<section class="panel" id="s-wrap">
+  <h2 class="q"><span class="q-icon">📚</span>정리해 봅시다.</h2>
+  <div class="summary-grid">
+    <div class="sum-card summer"><h3>여름</h3><p>태양의 남중 고도가 <b>높고</b>, 낮의 길이가 <b>길다</b>.</p><div class="sum-num" id="sumSummer"></div></div>
+    <div class="sum-card spring"><h3>봄 · 가을</h3><p>남중 고도와 낮의 길이가 여름과 겨울의 <b>중간</b>이다.</p><div class="sum-num" id="sumEquinox"></div></div>
+    <div class="sum-card winter"><h3>겨울</h3><p>태양의 남중 고도가 <b>낮고</b>, 낮의 길이가 <b>짧다</b>.</p><div class="sum-num" id="sumWinter"></div></div>
+  </div>
+  <div class="quiz" id="quiz"></div>
+  <div class="btn-row center">
+    <button class="btn primary big" id="btnQuizCheck">✔ 채점하기</button>
+    <button class="btn ghost" id="btnQuizReset">다시 풀기</button>
+  </div>
+  <p class="feedback" id="quizFeedback"></p>
+</section>
+
+</main>
+
+<footer class="pager">
+  <button class="btn" id="btnPrev">◀ 이전</button>
+  <span id="pageInfo">1 / 7</span>
+  <button class="btn" id="btnNext">다음 ▶</button>
+  <span class="kbd-hint">키보드 ← → 로도 이동할 수 있어요</span>
+</footer>
+
+<script src="solar.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
